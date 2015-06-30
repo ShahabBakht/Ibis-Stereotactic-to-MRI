@@ -3,53 +3,79 @@
 % open the stimulator image
 
 FigurePath = '.\';
-FigureName = 'Stimulator_long.png';
+FigureNameShort = 'Stimulator_short.png';
+FigureNameLong = 'Stimulator_long.png';
 
-StimulatorImage = imread([FigurePath,'\',FigureName]);
-StimulatorImage = rgb2gray(StimulatorImage);
+StimulatorImageShort = imread([FigurePath,'\',FigureNameShort]);
+StimulatorImageShort = rgb2gray(StimulatorImageShort);
+StimulatorImageLong = imread([FigurePath,'\',FigureNameLong]);
+StimulatorImageLong = rgb2gray(StimulatorImageLong);
 
-%% Sample the Stimulator Shape
+
+%% Resize Images to match
 
 % set the mm scale on the image
 figure('units','normalized','outerposition',[0 0 1 1])
-imagesc(double(StimulatorImage));colormap(jet);axis image
+imagesc(double(StimulatorImageShort));colormap(jet);axis image
 display('how much is 1 mm on this image? - select two points in 1 mm distance');
-[x_mm_scale,y_mm_scale] = ginput(2);
-if abs(x_mm_scale(1) - x_mm_scale(2)) > abs(y_mm_scale(1) - y_mm_scale(2))
-    mm_scale = abs(x_mm_scale(1) - x_mm_scale(2));
+[x_mm_scale_s,y_mm_scale_s] = ginput(2);
+if abs(x_mm_scale_s(1) - x_mm_scale_s(2)) > abs(y_mm_scale_s(1) - y_mm_scale_s(2))
+    mm_scale_s = abs(x_mm_scale_s(1) - x_mm_scale_s(2));
 else
-    mm_scale = abs(y_mm_scale(1) - y_mm_scale(2));
+    mm_scale_s = abs(y_mm_scale_s(1) - y_mm_scale_s(2));
 end
 
-% select the points on the stimulator upper border
-display('select as many points as you can on the upper border of the stimulator');
-[x_u,y_u] = ginput;
-hold on; scatter(x_u,y_u,'r')
+figure('units','normalized','outerposition',[0 0 1 1])
+imagesc(double(StimulatorImageLong));colormap(jet);axis image
+display('how much is 1 mm on this image? - select two points in 1 mm distance');
+[x_mm_scale_l,y_mm_scale_l] = ginput(2);
+if abs(x_mm_scale_l(1) - x_mm_scale_l(2)) > abs(y_mm_scale_l(1) - y_mm_scale_l(2))
+    mm_scale_l = abs(x_mm_scale_l(1) - x_mm_scale_l(2));
+else
+    mm_scale_l = abs(y_mm_scale_l(1) - y_mm_scale_l(2));
+end
 
-% select the points on the stimulator lower border
-display('select as many points as you can on the lower border of the stimulator');
-[x_l,y_l] = ginput;
-hold on; scatter(x_l,y_l,'r')
+StimulatorImageShort_resize = imresize(StimulatorImageShort,mm_scale_l/mm_scale_s);
+close all
+clc;
+
+StimulatorImageShort_resize = flipud(padarray(flipud(StimulatorImageShort_resize),[size(StimulatorImageLong,1)-size(StimulatorImageShort_resize,1) size(StimulatorImageLong,2)-size(StimulatorImageShort_resize,2)],0,'pre'));
+
+%% Sample the Stimulator Shape
+
+% select the points along the stimulator center 
+figure('units','normalized','outerposition',[0 0 1 1])
+h = imagesc(double(StimulatorImageShort_resize));colormap(jet);axis image
+display('select as many points as you can along the stimulator');
+[x_c_s,y_c_s] = ginput;
+hold on; scatter(x_c_s,y_c_s,'r')
 colormap(gray)
 
-% distance between the cable and the tip of the stimulator
-display('select two points: first at the end of the cable, second at the tip of the stimulator');
-[x_c2t,y_c2t] = ginput(2);
-hold on; scatter(x_c2t,y_c2t,'b')
+figure('units','normalized','outerposition',[0 0 1 1])
+imagesc(double(StimulatorImageLong));colormap(jet);axis image
+display('select as many points as you can along the stimulator');
+[x_c_l,y_c_l] = ginput;
+hold on; scatter(x_c_l,y_c_l,'r')
 colormap(gray)
 
 %% Curve Fitting
 
-f_l = fit(x_l,y_l,'power1');
-f_u = fit(x_u,y_u,'power1');
-hold on; plot(f_l,x_l,y_l);
-hold on; plot(f_u,x_u,y_u);
-figure; xaxis([min(x_l),max(x_l)]);plot(f_l)
+f_c_s = fit(x_c_l,y_c_l,'poly2');
 
+hold on;plot(f_c_s,x_c_l(1:end),y_c_l(1:end));
 
+%% stimulator length calculation
+xtest = min(x_c_l):0.1:max(x_c_l);
+d = 0;
+for i = 1:length(xtest)
+    
+    ytest(i) = feval(f_c_s,xtest(i));
+    if i > 1
+        d = d + sqrt((ytest(i) - ytest(i-1))^2+(xtest(i) - xtest(i-1))^2);
+    end
+    
+end
 
-
-
-
+StimulatorLength = d./mm_scale_l;
 
 
