@@ -36,6 +36,7 @@ else
 end
 
 StimulatorImageShort_resize = imresize(StimulatorImageShort,mm_scale_l/mm_scale_s);
+% imwrite(StimulatorImageShort_resize,'Stimulator_short_resize.png');
 close all
 clc;
 
